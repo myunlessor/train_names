@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Train Names</title>
+  <style type="text/css"></style>
+  <script type="text/javascript" src="js/jquery.min.js"></script>
+  <script type="text/javascript" src="js/underscore.min.js"></script>
+  <script type="text/javascript" src="js/trains[key_val].js"></script>
+  <script type="text/javascript">
+    String.prototype.endsWidth = function (pattern) {
+      var d = this.length - pattern.length;
+      return d >= 0 && this.indexOf(pattern, d) === d;
+    };
+
+    function keyValToPairs(obj) {
+      var result = [];
+      _.chain(obj).keys().each(function (key) {
+        _(obj[key].split(',')).each(function (val) {
+          result.push([key, val]);
+        });
+      });
+      return result;
+    }
+
+    function namespace(ns_string) {
+      var parts = ns_string.split('.'),
+          parent = ns;
+
+      _(parts).each(function (part) {
+        if (_.isUndefined(parent[part]))
+          parent[part] = {};
+        parent = parent[part];
+      });
+    }
+
+    function keyValToLevels(obj) {
+      var ns = {};
+
+      _.chain(obj).keys().each(function (key) {
+        var parts = key.split(''),
+            parent = ns,
+            value = obj[key].split(',');
+
+        _(parts).each(function (part) {
+          if (_.isUndefined(parent[part]))
+            parent[part] = {};
+          parent = parent[part];
+        });
+
+        parent['_'] = value.length === 1 ? value[0] : value;
+      });
+
+      return ns;
+    }
+
+    function sanitize(obj) {
+      _.chain(obj).keys().each(function (key) {
+        var val = obj[key];
+
+        if (_.isObject(val))
+          if (_.isEqual(['_'], _(val).keys()))
+            obj[key] = val['_'];
+          else
+            sanitize(val);
+      });
+      return obj;
+    }
+
+    var pairs = keyValToPairs(keyVal);
+
+    var ns = keyValToLevels(keyVal);
+    ns = sanitize(ns);
+
+    function levelsToKeyVal(obj, cat, result) {
+      cat = cat || '';
+      result = result || {};
+
+      _.chain(obj).keys().each(function (key) {
+        var val = obj[key];
+
+        cat += key;
+
+        if (_.isString(val) || _.isArray(val)) {
+          result[key === '_' && cat.slice(0, cat.length - 1) || cat] =
+            _.isArray(val) && val.join(',') || val;
+        } else {
+          levelsToKeyVal(val, cat, result);
+        }
+
+        cat = cat.slice(0, cat.length - 1);
+      });
+
+      return result;
+    }
+
+    (function ($) {
+      $(function () {
+        $('<div>', {
+          css: {
+            float: 'left',
+            width: '120px',
+            border: '1px solid #060',
+            margin: '0 10px 0 0',
+            padding: '5px'
+          },
+          html: '<pre>' + JSON.stringify(pairs, null, ' ') + '</pre>'
+        }).appendTo(document.body);
+
+        $('<div>', {
+          css: {
+            float: 'left',
+            width: '250px',
+            border: '1px solid #060',
+            margin: '0 10px 10px 0',
+            padding: '5px'
+          },
+          html: '<pre>' + JSON.stringify(ns, null, 2) + '</pre>'
+        }).appendTo(document.body);
+
+        $('<div>', {
+          css: {
+            float: 'left',
+            width: '800px',
+            border: '1px solid #060',
+            margin: '0 10px 0 0',
+            padding: '5px'
+          },
+          html: '<pre>' + JSON.stringify(keyVal, null, 2) + '</pre>'
+        }).appendTo(document.body);
+      });
+    }(jQuery));
+  </script>
+</head>
+<body>
+</body>
+</html>
